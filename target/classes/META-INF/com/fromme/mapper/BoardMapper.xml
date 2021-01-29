@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fromme.mapper.BoardMapper">
+	<sql id="checkUserAuthority">
+		<!-- 관리자가 아닐 경우 비공개 게시물 미포함 -->
+		<if test='cri.users_authority != 3'>
+			AND POST_PUB = 1
+		</if>
+	</sql>
+	
+	<sql id="searchText">
+		<if test="cri.field != null and cri.keyword != null">
+			<choose>
+				<when test="cri.field == 'title'.toString()">
+					AND POST_TITLE LIKE '%' ||  #{cri.keyword} || '%'
+				</when>
+				<when test="cri.field == 'users_id'.toString()">
+					AND USERS_ID LIKE '%' ||  #{cri.keyword} || '%'
+				</when>
+			</choose>
+		</if>
+	</sql>
+	
+	<sql id="searchImage">
+		<if test="cri.field != null and cri.keyword != null">
+			AND PA.#{cri.field} LIKE '%' || #{cri.word} || '%'
+		</if>
+	</sql>
+	
+	<sql id="userBoardListType">
+		<choose>
+			<when test="cri.field == 'board'.toString()">
+				USERS_ID = #{users_id} 
+			</when>
+			<when test="cri.field == 'reply'.toString()">
+				POST_NO IN (
+				SELECT POST_NO FROM REPLY WHERE REPLYS_ID = #{users_id}
+				GROUP BY POST_NO )
+			</when>
+		</choose>
+	</sql>
+	
+	<resultMap type="com.fromme.domain.PostViewVO" id="PostViewVO">
+		<result column="REPLY_COUNT" property="reply_count" />
+		<result column="USERS_AUTHORITY" property="users_authority" />
+		<result column="IMAGE_PATH" property="image_path" />
+		<collection property="postVO" resultMap="PostVO" />
+	</resultMap>
+	
+	<resultMap type="com.fromme.domain.PostVO" id="PostVO">
+		<result column="POST_NO" property="post_no" />
+		<result column="POST_TITLE" property="post_title" />
+		<result column="POST_CONTENT" property="post_content" />
+		<result column="POST_DATE" property="post_date" />
+		<result column="USERS_ID" property="users_id" />
+		<result column="CATEGORY_NO" property="category_no" />
+		<result column="POST_VIEWS" property="post_views" />
+		<result column="POST_PUB" property="post_pub" />
+	</resultMap>
+	
+	<!-- 회원 권한 가져오기 -->
+	<select id="getAuthority" resultType="_int">
+		SELECT USERS_AUTHORITY FROM USERS WHERE USERS_ID = #{users_id}
+	</select>
+	
+	<!-- 전체 게시물 가져오기-->
+	<select id="listAll" resultMap="PostViewVO" >
+		<![CDATA[
+		SELECT * FROM
+			(SELECT ROWNUM RN, pv.* FROM
+				(SELECT /*+ INDEX_DESC(POST POST_PK) */ *
+				FROM POST_VIEW 
+				WHERE CATEGORY_NO = #{cri.category_no} 
+		]]>
+		<include refid="checkUserAuthority"></include>
+		<include refid="searchText"></include>
+		<![CDATA[
+				ORDER BY POST_${cri.sort} DESC
+				) pv
+			WHERE ROWNUM <= #{cri.pageNum} * #{cri.amount}
+			)
+		WHERE RN > (${cri.pageNum} - 1) * ${cri.amount}
+		]]>
+	</select>
+
+	<!-- 특정 회원이 작성한 게시글 가져오기 -->
+	<!-- 특정 회원이 작성한 댓글이 있는 게시글 가져오기 -->
+	<select id="getBoardListByUser" resultMap="PostViewVO" >
+		<![CDATA[
+		SELECT * FROM
+			(SELECT ROWNUM RN, pv.* FROM
+				(SELECT /*+ INDEX_DESC(POST POST_PK) */ *
+				FROM POST_VIEW 
+				WHERE 
+		]]>
+		<include refid="userBoardListType"></include>
+		<include refid="checkUserAuthority"></include>
+		<![CDATA[
+			ORDER BY POST_NO DESC
+				) pv
+			WHERE ROWNUM <= #{cri.pageNum} * #{cri.amount}
+			)
+		WHERE RN > (${cri.pageNum} - 1) * ${cri.amount}
+		]]>
+	</select>
+	
+	<!-- 특정 회원이 작성한 댓글이 있는 게시글의 개수 가져오기 -->
+	<!-- 특정 회원이 작성한 게시글 개수 가져오기 -->
+	<select id="getBoardListCountByUser" resultType="_int">
+		<![CDATA[
+		SELECT COUNT(*) FROM POST WHERE 
+		]]>
+		<include refid="userBoardListType"></include>
+		<include refid="checkUserAuthority"></include>
+	</select>
+	
+	<!-- 특정 회원이 작성한 댓글 개수 가져오기 -->
+	<select id="getReplyCountByUser" resultType="_int">
+		SELECT COUNT(*) FROM REPLY WHERE REPLYS_ID = #{users_id}
+	</select>
+	
+	<!-- 키워드로 검색한 썸네일 리스트 정렬기준으로 정렬 -->
+	<select id="getBoardImageList" resultMap="PostViewVO" >
+		<![CDATA[
+		SELECT * FROM
+			(SELECT ROWNUM RN, pv.* FROM
+				(SELECT /*+ INDEX_DESC(POST POST_PK) */ *
+				FROM POST_IMAGE_VIEW pv
+				WHERE CATEGORY_NO = #{cri.category_no} 
+		]]>
+		<include refid="checkUserAuthority"></include>
+		<include refid="searchText"></include>
+		<![CDATA[
+				ORDER BY POST_${cri.sort} DESC
+				) pv
+			WHERE ROWNUM <= #{cri.pageNum} * #{cri.amount}
+			)
+		WHERE RN > (${cri.pageNum} - 1) * ${cri.amount}
+		]]>
+	</select>
+	
+	<!-- 카테고리로 조회한 게시글 목록의 개수 가져오기-->
+	<select id="boardListCount" parameterType="map" resultType="_int">
+		SELECT COUNT(*) FROM POST WHERE CATEGORY_NO = #{cri.category_no}		
+		<include refid="searchText"></include>
+		<include refid="checkUserAuthority"></include>
+	</select>
+	
+	<!-- 카테고리에 해당하는 게시판 이름 가져오기 -->
+	<select id="getBoardCategoryName" resultType="string">
+		SELECT CATEGORY_NAME FROM CATEGORY WHERE CATEGORY_NO = #{category_no}
+	</select>
+	
+	<!-- 현재 게시판 테이블의 시퀀스 번호 가져오기 -->
+	<select id="getCurrentBoardSeq" resultType="_int">
+		SELECT POST_SEQ.CURRVAL FROM DUAL
+	</select>
+	
+	<!-- 조회수 증가 -->
+	<update id="updateReadCount">
+		UPDATE POST SET POST_VIEWS = POST_VIEWS + 1 WHERE POST_NO = #{post_no}
+	</update>
+	
+	<insert id="insertBoard">
+		INSERT INTO POST VALUES(POST_SEQ.NEXTVAL, #{post_title}, #{post_content}, SYSDATE, #{users_id}, #{category_no}, 0, 1)
+	</insert>
+	
+	
+	<insert id="insertSelectKey_post_no">
+		<selectKey keyProperty="post_no" order="BEFORE" resultType="int">
+			SELECT POST_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		INSERT INTO POST
+		VALUES(#{post_no}, #{post_title}, #{post_content}, SYSDATE, #{users_id}, #{category_no}, 0, 1)
+	</insert>
+	
+	<update id="updateBoard">
+		UPDATE POST
+		SET POST_TITLE = #{post_title}, POST_CONTENT = #{post_content}
+		WHERE POST_NO = #{post_no}
+	</update>
+
+	<!-- 게시글 비공개로 변경 -->
+	<update id="updateHideBoard">
+		UPDATE POST SET POST_PUB = 2 WHERE POST_NO = ${post_no}
+	</update>
+
+	<!-- 현재 페이지의 게시글 모두 공개로 변경 -->
+	<update id="updateShowBoardAll">
+		UPDATE POST SET POST_PUB = 1 WHERE POST_NO BETWEEN #{start_no} AND #{end_no}
+	</update>
+	
+	<delete id="deleteBoard">
+		DELETE FROM POST WHERE POST_NO = #{post_no}
+	</delete>
+	
+	<select id="getDetail" resultMap="PostVO">
+		SELECT * FROM POST WHERE POST_NO = #{post_no}
+	</select>
+
+ 	<sql id="search">
+		<if test="cri.field != null and cri.keyword != null">
+			<choose>
+				<when test="cri.field == 'title'.toString()">
+					POST_TITLE LIKE '%' ||  #{cri.keyword} || '%'
+				</when>
+				<when test="cri.field == 'users_id'.toString()">
+					USERS_ID LIKE '%' ||  #{cri.keyword} || '%'
+				</when>
+			</choose>
+		</if>
+	</sql>
+	 
+	<!-- 회원이 작성한 게시글 보기에서 다음 게시글 가져오기 -->
+	<select id="getNextBoardByUserboard" resultMap="PostVO">
+		SELECT * FROM POST WHERE POST_NO = (
+			SELECT POST_NO FROM (
+				SELECT * FROM POST WHERE USERS_ID = #{users_id} 
+				<include refid="checkUserAuthority"></include>
+				ORDER BY POST_DATE
+			) WHERE POST_NO > ${post_no} AND ROWNUM = 1
+		)
+	</select>
+	
+	<!-- 회원이 작성한 게시글 보기에서 이전 게시글 가져오기 -->
+	<select id="getPrevBoardByUserboard" resultMap="PostVO">
+		SELECT * FROM POST WHERE POST_NO = (
+			SELECT POST_NO FROM (
+				SELECT * FROM POST WHERE USERS_ID = #{users_id} 
+				<include refid="checkUserAuthority"></include>
+				ORDER BY POST_DATE DESC 
+			) WHERE POST_NO <![CDATA[<]]> ${post_no} AND ROWNUM = 1
+		)
+	</select>
+	
+	<!-- 회원이 등록한 댓글이 있는 게시글 목록에서 다음 게시글 가져오기 -->
+	<select id="getNextBoardByUserreply" resultMap="PostVO">
+		SELECT * FROM (
+			SELECT * FROM
+				(SELECT ROWNUM R, D.* FROM
+					(SELECT * FROM POST_VIEW WHERE POST_NO IN (
+						SELECT POST_NO FROM REPLY WHERE REPLYS_ID = #{users_id}
+						<include refid="checkUserAuthority"></include>
+						GROUP BY POST_NO 
+					) ORDER BY POST_DATE DESC ) D
+				) B WHERE R <![CDATA[<]]> 
+			(SELECT R FROM
+				(SELECT ROWNUM R, D.* FROM
+					(SELECT * FROM POST_VIEW WHERE POST_NO IN (
+						SELECT POST_NO FROM REPLY WHERE REPLYS_ID = #{users_id}
+						<include refid="checkUserAuthority"></include>
+						GROUP BY POST_NO 
+					) ORDER BY POST_DATE DESC ) D
+				) B WHERE POST_NO = ${post_no}) ORDER BY R DESC)
+		WHERE ROWNUM = 1
+	</select>
+	
+	<!-- 회원이 등록한 댓글이 있는 게시글 목록에서 이전 게시글 가져오기 -->
+	<select id="getPrevBoardByUserreply" resultMap="PostVO">
+		SELECT * FROM
+			(SELECT ROWNUM R, D.* FROM
+				(SELECT * FROM POST_VIEW WHERE POST_NO IN (
+					SELECT POST_NO FROM REPLY WHERE REPLYS_ID = #{users_id}
+					GROUP BY POST_NO 
+				) 
+				<include refid="checkUserAuthority"></include>
+				ORDER BY POST_NO DESC ) D
+			) B WHERE R > 
+			(SELECT R FROM
+				(SELECT ROWNUM R, D.* FROM
+					(SELECT * FROM POST_VIEW WHERE POST_NO IN (
+						SELECT POST_NO FROM REPLY WHERE REPLYS_ID = #{users_id}
+						GROUP BY POST_NO 
+					) 
+					<include refid="checkUserAuthority"></include>
+					ORDER BY POST_NO DESC 
+				) D
+			) B WHERE POST_NO = ${post_no}
+		) AND ROWNUM = 1
+	</select>
+	
+	<!-- 키워드로 검색, 최근순으로 정렬된 게시글 목록에서 다음 게시글 가져오기 -->
+	<select id="getNextBoardSearchedAndSortedBydate" resultMap="PostVO">
+		SELECT * FROM POST WHERE POST_NO = (
+			SELECT POST_NO FROM (
+				SELECT * FROM POST WHERE
+				<include refid="search"></include>
+				<include refid="checkUserAuthority"></include>
+				ORDER BY POST_DATE
+			) WHERE POST_NO > ${post_no} AND ROWNUM = 1 AND CATEGORY_NO = ${cri.category_no}
+		)
+	</select>
+	
+	<!-- 키워드로 검색, 최근순으로 정렬된 게시글 목록에서 이전 게시글 가져오기 -->
+	<select id="getPrevBoardSearchedAndSortedBydate" resultMap="PostVO">
+		SELECT * FROM POST WHERE POST_NO = (
+			SELECT POST_NO FROM (
+				SELECT * FROM POST WHERE
+				<include refid="search"></include>
+				<include refid="checkUserAuthority"></include>
+				ORDER BY POST_DATE DESC
+			) WHERE POST_NO <![CDATA[<]]> ${post_no} AND ROWNUM = 1 AND CATEGORY_NO = ${cri.category_no}
+		)
+	</select>
+	
+	<!-- 키워드로 검색, 조회수로 정렬된 게시글 목록에서 다음 게시글 가져오기 -->
+	<select id="getNextBoardSearchedAndSortedByviews" resultMap="PostVO">
+		SELECT * FROM
+			(SELECT * FROM (
+				SELECT ROWNUM R, P.* FROM (
+					SELECT * FROM POST WHERE CATEGORY_NO = ${cri.category_no} 
+					AND 
+					<include refid="search"></include>
+					ORDER BY POST_VIEWS DESC
+					) P
+			) WHERE R <![CDATA[<]]> (
+				SELECT R FROM (
+					SELECT ROWNUM R, P.* FROM (
+						SELECT * FROM POST WHERE CATEGORY_NO = ${cri.category_no} 
+					AND 
+					<include refid="search"></include>
+						ORDER BY POST_VIEWS DESC
+					) P
+				) WHERE POST_NO = ${post_no}
+				<include refid="checkUserAuthority"></include>
+			) ORDER BY R DESC
+		) WHERE ROWNUM = 1
+	</select>
+	
+	<!-- 키워드로 검색, 조회수로 정렬된 게시글 목록에서 이전 게시글 가져오기 -->
+	<select id="getPrevBoardSearchedAndSortedByviews" resultMap="PostVO">
+		SELECT * FROM (
+			SELECT ROWNUM R, P.* FROM (
+				SELECT * FROM POST WHERE CATEGORY_NO = ${cri.category_no} 
+					AND 
+				<include refid="search"></include>
+				<include refid="checkUserAuthority"></include>
+				ORDER BY POST_VIEWS DESC
+				) P
+			) WHERE R > (
+			SELECT R FROM (
+				SELECT ROWNUM R, P.* FROM (
+					SELECT * FROM POST WHERE CATEGORY_NO = ${cri.category_no} 
+					AND 
+					<include refid="search"></include>
+					<include refid="checkUserAuthority"></include>
+					ORDER BY POST_VIEWS DESC
+				) P
+			) WHERE POST_NO = ${post_no}
+		) AND ROWNUM = 1
+	</select>
+	<!-- 최근순으로 정렬된 게시글 리스트에서 다음 게시글 가져오기 -->
+	<select id="getNextBoardSortedBydate" resultMap="PostVO">
+		SELECT * FROM POST WHERE POST_NO = (
+			SELECT POST_NO FROM (
+				SELECT * FROM POST WHERE 1=1
+				<include refid="checkUserAuthority"></include>
+				ORDER BY POST_DATE
+			) WHERE POST_NO > ${post_no} AND ROWNUM = 1 AND CATEGORY_NO = ${cri.category_no}
+		)
+	</select>
+	
+	<!-- 최근순으로 정렬된 게시글 리스트에서 이전 게시글 가져오기-->
+	<select id="getPrevBoardSortedBydate" resultMap="PostVO">
+		SELECT * FROM POST WHERE POST_NO = (
+			SELECT POST_NO FROM (
+				SELECT * FROM POST WHERE 1=1
+				<include refid="checkUserAuthority"></include>
+				ORDER BY POST_DATE DESC
+			) WHERE POST_NO <![CDATA[<]]> ${post_no} AND ROWNUM = 1 AND CATEGORY_NO = ${cri.category_no}
+		)
+	</select>
+	
+	<!-- 조회수로 정렬된 게시글 리스트에서 다음 게시글 가져오기 -->
+	<select id="getNextBoardSortedByviews" resultMap="PostVO">
+		SELECT * FROM
+			(SELECT * FROM (
+				SELECT ROWNUM R, P.* FROM (
+					SELECT * FROM POST WHERE CATEGORY_NO = ${cri.category_no}
+					<include refid="checkUserAuthority"></include>
+					ORDER BY POST_VIEWS DESC
+					) P
+			) WHERE R <![CDATA[<]]> (
+				SELECT R FROM (
+					SELECT ROWNUM R, P.* FROM (
+						SELECT * FROM POST WHERE CATEGORY_NO = ${cri.category_no} 
+						<include refid="checkUserAuthority"></include>
+						ORDER BY POST_VIEWS DESC
+					) P
+				) WHERE POST_NO = ${post_no}
+			) ORDER BY R DESC
+		) WHERE ROWNUM = 1
+	</select>
+	
+	<!-- 조회수로 정렬된 게시글 리스트에서 이전 게시글 가져오기 -->
+	<select id="getPrevBoardSortedByviews" resultMap="PostVO">
+		SELECT * FROM (
+			SELECT ROWNUM R, P.* FROM (
+				SELECT * FROM POST WHERE CATEGORY_NO = ${cri.category_no} 
+				<include refid="checkUserAuthority"></include>
+				ORDER BY POST_VIEWS DESC
+				) P
+			) WHERE R > (
+			SELECT R FROM (
+				SELECT ROWNUM R, P.* FROM (
+					SELECT * FROM POST WHERE CATEGORY_NO = ${cri.category_no}
+					<include refid="checkUserAuthority"></include>
+					ORDER BY POST_VIEWS DESC
+				) P
+			) WHERE POST_NO = ${post_no}
+		) AND ROWNUM = 1
+	</select>
+</mapper>

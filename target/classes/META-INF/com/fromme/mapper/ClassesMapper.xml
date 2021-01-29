@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.fromme.mapper.ClassesMapper">
+
+
+	<sql id="criteria">
+		<if test="keyword != null or genreType != null ">
+			<trim prefix="(" suffix=") AND">
+				<choose>
+					<when test=" keyword != null ">
+						(CLASSES_NAME LIKE '%' || #{keyword} || '%')
+					</when>
+					<when test=" genreType != null ">
+						(GENRE_NO = #{genreType} )
+					</when>
+				</choose>
+			</trim>
+		</if>
+	</sql>
+
+	<select id="getListWithPaging"
+		resultType="com.fromme.domain.ClassesVO">
+   <![CDATA[
+      SELECT  CLASSES_NO, CLASSES_NAME, GENRE_NO, STUDIO_NO, 
+		CLASSES_PRICE, CLASSES_START, CLASSES_STATE, CLASSES_LIKE
+      FROM 
+         (SELECT /*+ INDEX_DESC(CLASSES CLASSES_PK) */ROWNUM RN, 
+         CLASSES_NO, CLASSES_NAME, GENRE_NO, STUDIO_NO, 
+		CLASSES_PRICE, CLASSES_START, CLASSES_STATE, CLASSES_LIKE  
+         FROM CLASSES 
+         WHERE 
+     ]]>
+		<include refid="criteria"></include>
+     
+    <![CDATA[
+        	 ROWNUM <= #{pageNum} * #{amount})
+    	 WHERE RN > (#{pageNum} - 1) * #{amount}
+   	]]>
+   	<include refid="order"></include>
+	</select>
+	
+	<sql id="order">
+	
+	<if test="type != null">
+		
+					<trim  prefix="ORDER BY" >
+						<choose>
+							<when test="type == 'N'.toString()"> CLASSES_NO DESC
+							</when>
+							<when test="type == 'P'.toString()"> CLASSES_NAME ASC
+							</when>
+							<when test="type == 'L'.toString()"> CLASSES_PRICE ASC
+							</when>
+							<when test="type == 'E'.toString()">  CLASSES_PRICE DESC
+							</when>
+							<when test="type == 'H'.toString()"> CLASSES_LIKE DESC
+							</when>
+						</choose>
+					</trim>
+	
+			</if>
+	</sql>
+	
+	<!-- 전체 클래스 개수 가져오기 -->	
+	<select id="getTotal" resultType="_int">
+		 <![CDATA[
+		SELECT COUNT(*) FROM CLASSES WHERE 
+	 ]]>
+		<include refid="criteria"></include>
+	 <![CDATA[
+		CLASSES_NO > 0
+	 ]]>
+	</select>
+	
+	<!-- 장르정보 가져오기 -->	
+	<select id="getGenre" resultType="com.fromme.domain.GenreVO">
+		SELECT * FROM GENRE
+	</select>
+	
+	<!-- 클래스 정보 가져오기 -->	
+	<select id="getDetail" resultType="com.fromme.domain.ClassesVO">
+		SELECT * FROM CLASSES WHERE CLASSES_NO = #{classes_no}
+	</select>
+	
+	<!-- 클래스 상태변경 -->
+	<update id="updateClassesStatus">
+		UPDATE CLASSES SET 
+		CLASSES_STATE = #{classes_state}
+		WHERE CLASSES_NO = #{classes_no} 
+	</update>
+	
+	<!-- 공방 정보 가져오기 -->	
+	<select id="getStudio" resultType="com.fromme.domain.StudioVO">
+		SELECT * FROM STUDIO 
+	</select>
+	
+	<!-- 클래스 신청가능 날짜 가져오기 -->
+	<select id="getClassesDate" resultType="string">
+		SELECT CLASSES_DATE FROM CLASSES_INFO WHERE CLASSES_NO = #{classes_no} AND CLASSES_INDIVIDUAL_STATE = 1
+	</select>
+	<!-- 날짜별 신청가능 인원 가져오기 -->
+	<select id="getClassesInfoByDate" resultType="com.fromme.domain.ClassesInfoVO">
+		SELECT * FROM CLASSES_INFO WHERE CLASSES_NO = #{classesNo} AND CLASSES_DATE = #{classesDate}
+	</select>
+	
+	
+	
+	<!-- 좋아요 업데이트 -->
+	<update id="updateLike" >
+		UPDATE LIKEIT SET LIKE_CNT = 
+			CASE WHEN LIKE_CNT = 1 THEN 0 ELSE 1 END
+				WHERE USERS_ID = #{usersId} AND CLASSES_NO = #{classesNo}
+	</update>
+	
+	<!-- 클래스 좋아요 업데이트 -->
+	<update id="updateClassesLike" >
+		UPDATE CLASSES SET CLASSES_LIKE = 
+			(SELECT CLASSES_LIKE FROM CLASSES WHERE CLASSES_NO = #{classesNo})
+			+ ( CASE WHEN (SELECT LIKE_CNT FROM LIKEIT 
+				WHERE CLASSES_NO = #{classesNo} AND USERS_ID= #{usersId}) = 1 THEN 1 ELSE -1 END )
+		WHERE CLASSES_NO = #{classesNo}
+				
+	</update>
+	
+	<!-- 좋아요 새로 등록 -->
+	<insert id="insertLike">
+		INSERT INTO LIKEIT 
+			VALUES(likeit_SEQ.NEXTVAL, #{users_id}, 
+				#{classes_no}, 0 )
+	</insert>
+
+	<!-- 좋아요 선택된 클래스번호 가져오기 -->
+	<select id="getLikes" resultType="com.fromme.domain.LikeitVO">
+		SELECT * FROM LIKEIT 
+		WHERE USERS_ID = #{users_id}
+	</select>
+	
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

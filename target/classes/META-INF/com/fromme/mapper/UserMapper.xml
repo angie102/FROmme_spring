@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.fromme.mapper.UserMapper">
+	<!-- 특정 회원 주소 가져오기 -->
+	<select id="getUserAddress" resultType="string">
+		SELECT USERS_ADDRESS FROM USERS WHERE USERS_ID = #{users_id}
+	</select>
+</mapper>

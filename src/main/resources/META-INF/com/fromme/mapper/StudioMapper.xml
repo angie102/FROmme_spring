@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.fromme.mapper.StudioMapper">
+	<!-- 검색된 공방 이름, 공방 주소 -->
+	<select id="getFindGongBangList" resultType="com.fromme.domain.StudioVO">
+		<![CDATA[
+		SELECT * FROM
+			(SELECT ROWNUM RN, S.* FROM
+				(SELECT /*+ INDEX_DESC(STUDIO STUDIO_PK) */ *
+				FROM STUDIO s
+				WHERE STUDIO_NAME LIKE '%' ||  #{search} || '%' OR STUDIO_ADDRESS LIKE '%' ||  #{search} || '%' 
+		]]>
+		<![CDATA[
+				) S
+			WHERE ROWNUM <= #{cri.pageNum} * #{cri.amount}
+			)
+		WHERE RN > (${cri.pageNum} - 1) * ${cri.amount}
+		]]>
+	</select>
+	<!-- 검색된 공방 목록 개수 -->
+	<select id="getGongbangListCountBySearchWord" resultType="_int">
+		SELECT COUNT(*) FROM STUDIO WHERE STUDIO_NAME LIKE '%' ||  #{search} || '%' OR STUDIO_ADDRESS LIKE '%' ||  #{search} || '%' 
+	</select>
+</mapper>

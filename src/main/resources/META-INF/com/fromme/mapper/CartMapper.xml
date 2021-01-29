@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.fromme.mapper.CartMapper">
+
+
+	<!-- 장바구니 리스트 가져오기 -->
+	<select id="selectCart" resultType="com.fromme.domain.CartListVO">
+		SELECT
+        ct.USERS_ID AS users_id, 
+ 		c.CLASSES_NAME AS classes_name,
+        c.CLASSES_NO AS classes_no,
+        ct.CHOICE_DATE AS choice_date,
+        ct.CART_NO AS cart_no,
+        ct.CLASSES_INFO_NO AS classes_info_no,
+        ct.CART_QUANTITY AS cart_quantity,
+        c.CLASSES_PRICE AS classes_price,
+        (c.CLASSES_PRICE * ct.CART_QUANTITY) as cart_sum_price
+        FROM CLASSES c, CART ct 
+        WHERE c.CLASSES_NO = ct.CLASSES_NO AND ct.users_id = #{usersId}
+        ORDER BY c.CLASSES_NAME DESC
+	</select>
+
+	
+	<insert id="insertCart">
+		INSERT INTO CART
+		VALUES(cart_SEQ.NEXTVAL, SYSDATE, 1,
+		#{choiceDate}, #{classesInfoNo}, #{classesNo}, #{usersId})
+	</insert>
+
+	<!-- 장바구니에 같은 옵션의 아이템이 존재하는지 확인 -->
+	<select id="countCart" resultType="_int">
+		SELECT
+		COUNT(*) FROM CART 
+		WHERE CLASSES_NO = #{classesNo} AND USERS_ID = #{usersId} 
+		AND CLASSES_INFO_NO = #{classesInfoNo}
+	</select>
+
+	<!-- 같은 아이템이 존재하는 경우 장바구니에 수량 추가 -->
+	<update id="updateCart" >
+		UPDATE CART SET
+		CART_QUANTITY = 
+		(SELECT CART_QUANTITY FROM CART WHERE CLASSES_NO = ${classesNo}
+		AND USERS_ID = #{usersId} AND CLASSES_INFO_NO = #{classesInfoNo} )+1
+			WHERE CLASSES_NO = #{classesNo} AND USERS_ID =#{usersId} 
+			AND CLASSES_INFO_NO = #{classesInfoNo}
+	</update>
+
+	<!-- 장바구니 아이템 삭제 -->
+	<delete id="deleteCart" >
+		DELETE FROM CART
+		WHERE CART_NO = #{cartNo}
+	</delete>
+	
+	<!-- 장바구니 아이템 수량 변경 -->
+	<update id="updateQuantity">
+		UPDATE CART SET
+		CART_QUANTITY = #{cartQuantity}
+		WHERE CART_NO = #{cartNo}
+	</update>
+
+	<!-- 장바구니 전체 삭제 -->
+	<delete id="deleteCartAll">
+		DELETE
+		FROM CART
+		WHERE USERS_ID =#{users_id} 
+	</delete>
+
+
+
+
+	<!-- 결제상태 가져오기 -->
+	<select id="getOrderState" resultType="string">
+		SELECT ORDERLIST_STATE FROM ORDERSTATUS WHERE
+		ORDERLIST_STATE_NO =${order_state_no}
+	</select>
+	
+	<!-- 주문자 상세정보 저장 -->
+	<insert id="insertOrdererInfo" >
+		INSERT INTO
+		ORDERER_INFO VALUES
+		(ORDERER_INFO_SEQ.NEXTVAL, #{orderer_name}, #{orderer_phone}, 
+		{orderer_email}, #{total_price})
+	</insert>
+
+
+	<!-- 주문내역 저장 -->
+	<insert id="insertOrderlist">
+		INSERT INTO ORDERLIST
+		VALUES
+		(#{classes_no}, #{users_id}, SYSDATE, SYSDATE+7, #{orderlist_state_no}, 
+		orderlist_SEQ.NEXTVAL, #{studio_no}, #{choice_date}, #{classes_info_no},
+		#{reservation_no}, #{quantity}, #{orderer_info_no})
+	</insert>
+	
+	<!-- 특정 회원 정보 가져오기 -->
+	<select id="getUsersNamePhoneEmail" resultType="com.fromme.domain.UsersVO">
+		SELECT USERS_NAME, USERS_PHONE, USERS_EMAIL FROM USERS WHERE USERS_ID = #{usersId}
+	</select>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

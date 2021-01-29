@@ -1,0 +1,76 @@
+.pharchase-info-wrapper {
+  margin: 0 auto;
+}
+
+form.customform input,
+form.customform textarea,
+form.customform select {
+  background: rgba(0, 0, 0, 0.03) none repeat scroll 0 0;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  font-size: 12px;
+  padding: 0.625rem;
+  width: 100%;
+}
+.parchase-box {
+  width: 100%;
+  border: rgb(228, 228, 228) 1px solid;
+  background: none;
+  display: inline-block;
+  border-radius: 2px;
+  box-shadow: rgb(204, 204, 204) 4px 6px 10px;
+  background-color: white;
+  padding: 10% 10%;
+}
+
+.form-control,
+.board-head .input-group .form-control:not(:first-child):not(:last-child),
+.doz_sys .order_wrap input.form-control[readonly] {
+  color: #8d8c8c;
+  background-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0);
+  border-color: #ececec;
+  -webkit-box-shadow: none;
+  box-shadow: none;
+  border-radius: 0;
+  border-width: 0;
+  border-bottom-width: 1px;
+  padding-left: 0;
+  padding-right: 0;
+  background-color: transparent;
+  display: inline-block;
+  width: 100%;
+  margin: 5% 0;
+}
+.control_box .form-control {
+  border-radius: 0 !important;
+  padding: 6px 50px 6px 30px !important;
+}
+.control_box a.icon {
+  padding-left: 0 !important;
+}
+.control_box.active .icon.close {
+  padding-right: 0 !important;
+}
+.shop_mypage .item-detail a,
+.shop_mypage .item-detail p,
+.shop-content select.form-control,
+.shop_payment .shop-content p,
+.tip-off.payment_method h6,
+.grid_ignore.bg_on .author > div {
+  color: #363636;
+}
+
+.radio-styled:not(ie8).radio_color_option.small input ~ span span {
+  border-color: rgb(54, 54, 54);
+  border-color: rgba(54, 54, 54, 0.15);
+}
+
+
+
+/* -1440px version */
+@media screen and (max-width: 1440px) {
+  .pharchase-info-wrapper {
+    margin: 0 auto;
+    width: 100%;
+  }
+}

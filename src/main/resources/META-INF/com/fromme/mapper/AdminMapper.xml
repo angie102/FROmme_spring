@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.fromme.mapper.AdminMapper">
+	<!--
+		파라미터로 받은 값에 접근할 때 #{}, ${}로 사용한다.
+		1. #{}
+			받아온 파라미터의 타입에 상관없이 String타입으로 변경된다.
+			사용자가 직접 입력한 값에 사용하는 것이 좋다(보안에 유리하다)
+		2. ${}
+			받아온 파라미터의 타입을 그대로 유지한다.
+			사용자가 직접 입력한 값을 전달받을 때에는 사용하지 않는 것이 좋다(쿼리 주입 보안에 취약하다)
+			테이블이나 컬럼명을 파라미터로 받을 때에 사용한다(#{}은 자동으로 따옴표가 붙기 때문)
+	-->
+	<!-- 최근 4개 신규 클래스 -->
+	<select id="getIndexClasses" resultType="com.fromme.domain.ClassesVO">
+		SELECT * FROM (SELECT * FROM CLASSES ORDER BY CLASSES_REGISTERDATE ASC) WHERE 4 >= ROWNUM
+	</select>
+	
+	<!-- 최근 몇일간 조회수 -->
+	<select id="getIndexView" resultType="com.fromme.domain.IndexViewVO">
+		SELECT (SELECT COUNT(*) FROM VISIT) AS totalViews, 
+			(SELECT COUNT(*) FROM VISIT WHERE VISIT_TIME between SYSDATE-1 and SYSDATE) AS dayViews,
+			(SELECT COUNT(*) FROM VISIT WHERE VISIT_TIME > SYSDATE - 30) AS monthViews 
+			FROM DUAL
+	</select>
+	
+	<!-- 금일 접속자 중 동일 아이피가 있는지 확인하는 쿼리 -->
+	<select id="getSameIp" resultType="_int">
+		SELECT COUNT(*) FROM VISIT 
+		WHERE USER_IP = #{user_ip} and to_char(visit_time, 'YYYY-MM-DD') = to_char(SYSDATE, 'YYYY-MM-DD')
+	</select>
+	
+	<!-- 홈페이지 조회수 업데이트 해주는 쿼리 -->
+	<insert id="insertViews" parameterType="string">
+		INSERT INTO VISIT VALUES(#{user_ip}, SYSDATE)
+	</insert>
+	
+	<!-- 일주일간 클래스 예약 수 구하는 쿼리문 -->
+	<select id="getClassChartWeekData" resultType="com.fromme.domain.ChartVO">
+		SELECT to_char(PAYMENT_DATE, '${classify}') AS criteriaDate, SUM(QUANTITY) AS dateData FROM ORDERLIST
+		WHERE TO_CHAR(PAYMENT_DATE, '${classify_dateFormat}') BETWEEN '${startTime}' AND '${endTime}'
+		GROUP BY to_char(PAYMENT_DATE, '${classify}') ORDER BY to_char(PAYMENT_DATE, '${classify}') ASC
+	</select>
+	
+	<select id="getClassChartData" parameterType="map" resultType="com.fromme.domain.ChartVO">
+		SELECT copy_t.hour_24 AS criteriaDate, NVL(SUM(main_t.QUANTITY), 0) AS dateData FROM ORDERLIST main_t, 
+		(SELECT LPAD(ROWNUM-1, 2, '0') + 1 AS hour_24 FROM dict WHERE TO_NUMBER('${row}') >= ROWNUM) copy_t 
+		WHERE main_t.PAYMENT_DATE(+) >= to_date('${endTime}', '${date_format}') 
+		AND TO_DATE('${startTime}', '${date_format}') > main_t.PAYMENT_DATE(+)  
+		AND copy_t.hour_24 = to_char(main_t.PAYMENT_DATE(+), '${classify}') 
+		GROUP BY ROLLUP (copy_t.hour_24) ORDER BY copy_t.hour_24
+	</select>
+	
+	<select id="getClassChartTodayData" parameterType="map" resultType="com.fromme.domain.ChartVO">
+		SELECT copy_t.hour_24 AS criteriaDate, NVL(SUM(main_t.QUANTITY), 0) AS dateData FROM ORDERLIST main_t, 
+		(SELECT LPAD(ROWNUM-1, 2, '0') AS hour_24 FROM dict WHERE TO_NUMBER('${row}') >= ROWNUM) copy_t 
+		WHERE main_t.PAYMENT_DATE(+) >= to_date('${endTime}', '${date_format}') 
+		AND TO_DATE('${startTime}', '${date_format}') + 0.99999 > main_t.PAYMENT_DATE(+)  
+		AND copy_t.hour_24 = to_char(main_t.PAYMENT_DATE(+), '${classify}') 
+		GROUP BY ROLLUP (copy_t.hour_24) ORDER BY copy_t.hour_24
+	</select>
+	
+	<!-- 일일 조회수 차트 데이터 -->
+	<select id="getViewChartTodayData" parameterType="map" resultType="com.fromme.domain.ChartVO">
+		SELECT copy_t.hour_24 AS criteriaDate, NVL(COUNT(main_t.VISIT_TIME), 0) AS dateData FROM VISIT main_t, 
+		(SELECT LPAD(ROWNUM-1, 2, '0') AS hour_24 FROM dict WHERE TO_NUMBER('${row}') >= ROWNUM) copy_t 
+		WHERE main_t.VISIT_TIME(+) >= to_date('${endTime}', '${date_format}') 
+		AND TO_DATE('${startTime}', '${date_format}') + 0.99999 > main_t.VISIT_TIME(+)  
+		AND copy_t.hour_24 = to_char(main_t.VISIT_TIME(+), '${classify}') 
+		GROUP BY ROLLUP (copy_t.hour_24) ORDER BY copy_t.hour_24
+	</select>
+	
+	<!-- 조회수 차트 데이터 -->
+	<select id="getViewChartData" parameterType="map" resultType="com.fromme.domain.ChartVO">
+		SELECT copy_t.hour_24 AS criteriaDate, NVL(COUNT(main_t.VISIT_TIME), 0) AS dateData FROM VISIT main_t, 
+		(SELECT LPAD(ROWNUM-1, 2, '0') + 1 AS hour_24 FROM dict WHERE TO_NUMBER('${row}') >= ROWNUM) copy_t 
+		WHERE main_t.VISIT_TIME(+) >= to_date('${endTime}', '${date_format}') 
+		AND TO_DATE('${startTime}', '${date_format}') + 0.99999 > main_t.VISIT_TIME(+)  
+		AND copy_t.hour_24 = to_char(main_t.VISIT_TIME(+), '${classify}') 
+		GROUP BY ROLLUP (copy_t.hour_24) ORDER BY copy_t.hour_24
+	</select>
+	
+	<!-- 일주일간 조회 수 구하는 쿼리문 -->
+	<select id="getViewChartWeekData" parameterType="map" resultType="com.fromme.domain.ChartVO">
+		SELECT to_char(VISIT_TIME, '${classify}') AS criteriaDate, COUNT(VISIT_TIME) AS dateData FROM VISIT
+		WHERE TO_CHAR(VISIT_TIME, '${classify_dateFormat}') BETWEEN '${startTime}' AND '${endTime}'
+		GROUP BY to_char(VISIT_TIME, '${classify}') ORDER BY to_char(VISIT_TIME, '${classify}') ASC
+	</select>
+	
+	<!-- 메인 페이지 한달 주문 데이터 -->
+	<select id="getIndexReserve" resultType="_int">
+		SELECT NVL(SUM(c.CLASSES_PRICE),0) AS month_profit 
+		FROM ORDERLIST o JOIN CLASSES c ON o.CLASSES_NO = c.CLASSES_NO 
+		WHERE PAYMENT_DATE BETWEEN TO_DATE('${startTime}') AND TO_DATE('${endTime}')
+	</select>
+	
+	<!-- 메인 페이지 총 주문 데이터-->
+	<select id="getIndexTotalReserve" resultType="_int">
+		SELECT COUNT(*) FROM ORDERLIST
+	</select>
+	
+	<!-- 공방 승인 페이지 쿼리 날리기 -->
+	<select id="getStudioApplyCount" resultType="_int">
+		select COUNT(*) from studio where studio_status = 4
+	</select> 
+	
+	<!-- 공방 승인 페이지 쿼리 -->
+	<select id="getStudioApplyList" resultType="com.fromme.domain.StudioVO">
+		SELECT * FROM
+			(SELECT ROWNUM R, D.* FROM
+				(SELECT * FROM STUDIO WHERE STUDIO_STATUS = 4 
+					ORDER BY STUDIO_NO DESC) D) B 
+			WHERE B.R BETWEEN ${startRow} AND ${endRow}
+	</select>
+	
+	<!-- 공방 승인완료 쿼리 -->
+	<update id="setStudioAuthority">
+		UPDATE STUDIO SET STUDIO_STATUS = ${authority} WHERE STUDIO_NO = ${studio_no}
+	</update>
+	
+	<!--유저 목록 가져오는 쿼리 -->
+	<select id="getUserList" resultType="com.fromme.domain.UserListVO">
+		SELECT * FROM
+			(SELECT ROWNUM R, D.* FROM
+				(SELECT * FROM USERLIST ORDER BY USERS_NO DESC) D) B 
+			WHERE B.R BETWEEN ${startRow} AND ${endRow}
+	</select>
+	
+	<!-- 파라미터 타입을 문자열로 주는 경우 인덱스 (0~n), 변수명을 직접 사용하는 경우 다중 파라미터 가능 -->
+	<delete id="deleteList" parameterType="map" >
+		DELETE FROM ${table} WHERE ${column_name} = TO_NUMBER(#{num})
+	</delete>
+	
+	<update id="setPrivate" parameterType="map" >
+		UPDATE POST SET POST_PUB = ${post_pub} WHERE POST_NO = ${post_no}
+	</update>
+	
+	<select id="getClassList" parameterType="map" resultType="com.fromme.domain.ClassesVO">
+		SELECT * FROM
+			(SELECT ROWNUM R, D.* FROM
+				(SELECT * FROM CLASSES ORDER BY CLASSES_NO DESC) D) B 
+			WHERE B.R BETWEEN ${startRow} AND ${endRow}
+	</select>
+	
+	<select id="getUserCnt" resultType="_int">
+		SELECT COUNT(*) FROM USERS
+	</select>
+	
+	<update id="setUserState" >
+		UPDATE USERS SET USERS_AUTHORITY = ${users_authority} WHERE USERS_NO = ${users_no}
+	</update>
+	
+	<update id="setClassState" >
+		UPDATE CLASSES SET CLASSES_STATE = ${classes_state} WHERE CLASSES_NO = ${classes_no}
+	</update>
+	
+	<update id="setUserInfo" >
+		UPDATE USERS SET USERS_NAME = '${user_name}', 
+			USERS_EMAIL = '${user_email}', USERS_PHONE = '${user_phone}', USERS_AUTHORITY = TO_NUMBER('${user_authority}')
+		 	WHERE USERS_ID = '${user_id}'
+	</update>
+	
+	<update id="resetPassword" >
+		UPDATE USERS SET USERS_PW = '1234' WHERE USERS_ID = ${user_id}
+	</update>
+</mapper>

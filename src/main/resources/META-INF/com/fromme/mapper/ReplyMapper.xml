@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.fromme.mapper.ReplyMapper">
+
+	<resultMap type="com.fromme.domain.ReplyVO" id="ReplyVO">
+		<result column="POST_NO" property="post_no" />
+		<result column="REPLYS_NO" property="replys_no" />
+		<result column="REPLYS_ID" property="replys_id" />
+		<result column="REPLYS_CONTENT" property="replys_content" />
+		<result column="REPLYS_DATE" property="replys_date" />
+	</resultMap>
+
+	<select id="getReply" resultMap="ReplyVO">
+		SELECT * FROM REPLY WHERE POST_NO = #{post_no} ORDER BY REPLYS_NO DESC
+	</select>
+	
+	<insert id="insertBoardReply">
+		INSERT INTO REPLY
+		VALUES (#{post_no}, REPLY_SEQ.NEXTVAL, #{replys_id}, #{replys_content}, SYSDATE)
+	</insert>
+	
+	<update id="updateBoardReply">
+		UPDATE REPLY SET REPLYS_CONTENT = #{replys_content} WHERE REPLYS_NO = #{replys_no}
+	</update>
+	
+	<delete id="deleteBoardReply">
+		DELETE FROM REPLY WHERE REPLYS_NO = #{replys_no}
+	</delete>
+	
+	<delete id="deleteBoardReplyAll">
+		DELETE FROM REPLY WHERE POST_NO = #{post_no}
+	</delete>
+	
+	<!-- 현재 게시판 테이블의 시퀀스 번호 가져오기 -->
+	<select id="getCurrentReplySeq" resultType="_int">
+		SELECT REPLY_SEQ.CURRVAL FROM DUAL
+	</select>
+	
+	<select id="getReplyDetail" resultMap="ReplyVO">
+		SELECT * FROM REPLY WHERE REPLYS_NO = #{replys_no}
+	</select>
+	
+	<select id="getTotal" resultType="_int">
+		SELECT COUNT(*) FROM REPLY WHERE POST_NO = #{post_no}
+	</select>
+	
+	<select id="getListWithPaging" resultMap="ReplyVO">
+		<![CDATA[
+			SELECT  POST_NO, REPLYS_NO, REPLYS_ID, REPLYS_CONTENT, REPLYS_DATE
+			FROM 
+				(
+					SELECT /*+ INDEX_DESC(REPLY REPLY_PK) */  ROWNUM RN, POST_NO, REPLYS_NO, REPLYS_ID, REPLYS_CONTENT, REPLYS_DATE
+					FROM REPLY
+					WHERE POST_NO = #{post_no}
+					AND REPLYS_NO > 0 AND ROWNUM <= #{cri.pageNum} * #{cri.amount}
+				)
+			WHERE RN > (#{cri.pageNum} - 1)* #{cri.amount}
+		]]>
+	</select>
+</mapper>

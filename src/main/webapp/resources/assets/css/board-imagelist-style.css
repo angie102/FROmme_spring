@@ -1,0 +1,17 @@
+@charset "UTF-8";
+/* 게시판 이미지 리스트 영역 */
+.com_wrapper {width:100%; text-align:center; padding:15px; font-family: "GmarketSansLight"; font-weight: bold;}
+.com_contents {width:20%; height: 300px; margin-left:4%; float:left; margin-bottom: 30px;}
+.com_contents img,
+.com_contents iframe {width:200px; height:200px; max-width:100%;}
+.com_contents .com_title,
+.com_contents .com_writer {padding-top:10px; font-family: "GmarketSansLight"; font-size:13px; font-weight:bold; position: relative;}
+.com_contents .com_writer span.id:hover {text-decoration:underline !important; cursor:pointer; text-underline-position: under;}
+.com_contents .com_writer ul {position: absolute; top: 35px; right: -30px; background-color: rgb(255, 255, 255);height: 85px; z-index: 1000; border: 1px solid #00adb5;padding: 0;}
+.com_contents .com_writer ul li {padding:10px 15px;}
+.com_contents .com_writer ul li:hover {background-color:#00adb5;}
+.com_contents .com_writer ul li:hover a {color: #fff;}
+.com_contents .com_title a {overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 55%;display: inline-block; vertical-align: middle;}
+.com_contents .com_title a:hover {text-decoration:underline;text-underline-position: under;}
+.com_contents .com_date_num {font-size:12px; font-family: "GmarketSansLight"; padding-top:5px;}
+.com_contents .com_date_num .num:before {content:"ㆍ";}

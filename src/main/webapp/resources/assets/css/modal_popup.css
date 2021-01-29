@@ -1,0 +1,25 @@
+.popup-wrapper{
+    position : absolute;
+    width: 100%;
+    height: inherit;
+    top:0;
+    left : 0;
+    display: none;
+}
+
+
+
+.popup-content{
+    background : #fff;
+    position: fixed;
+  border-radius: 2px;
+  box-shadow: rgb(204, 204, 204) 4px 6px 10px;
+  z-index:1000;
+    top: 15%;
+    left: 3%;
+border: rgb(204, 204, 204) 1px solid;
+    padding: 10px;
+    border-radius: 5px;
+    
+}
+
