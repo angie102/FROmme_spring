@@ -20,18 +20,6 @@
 
 <div style="width:500px;height:10px"></div>
 
-## 구현
-
-- [x] 회원가입/로그인
-- [x] 글쓰기
-- [x] 댓글
-- [x] 가까운 곳에 있는 공방 찾기
-- [x] 쪽지
-- [x] 클래스 개설
-
-<div style="width:500px;height:10px"></div>
-
-
 ## 기술스택
 
 - OS: Linux centos 7 
@@ -49,9 +37,13 @@
 
 <div style="width:500px;height:10px"></div>
 
-## 팀원
+### 참여 부분
+- 메인페이지
+- 클래스 목록
+- 클래스 상세페이지
+- 장바구니
+- 결제페이지
 
-#### 이형준[@hyungjun7](https://github.com/hyungjun7)
 
 
 
