@@ -7,10 +7,6 @@
 <div style="padding: 40px">
 </div>
 
-
-### [홈페이지](http://fromme.tk) 
-
-
 <div style="width:500px;height:10px"></div>
 
 ##  FROmme 소개
